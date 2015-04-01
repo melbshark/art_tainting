@@ -158,7 +158,8 @@ art_cflags := \
   -Wno-unused-parameter \
   -Wstrict-aliasing \
   -fstrict-aliasing \
-  -fvisibility=protected
+  -fvisibility=protected \
+  -DART_TAINTING=1
 
 ART_TARGET_CLANG_CFLAGS :=
 ART_TARGET_CLANG_CFLAGS_arm :=
