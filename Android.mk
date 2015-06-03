@@ -94,7 +94,7 @@ ifneq ($(art_dont_bother),true)
 ########################################################################
 # cpplint rules to style check art source files
 
-include $(art_path)/build/Android.cpplint.mk
+# include $(art_path)/build/Android.cpplint.mk
 
 ########################################################################
 # product rules

@@ -43,6 +43,9 @@
 #include "thread_state.h"
 #include "throw_location.h"
 
+// ART/Tainting
+// #include "taints.h"
+
 namespace art {
 
 namespace gc {
@@ -1144,6 +1147,10 @@ class Thread {
 
     // Recorded thread state for nested signals.
     jmp_buf* nested_signal_state;
+
+    // ART/Tainting
+    // Object taintings
+    // Tainting<size_t>* taintings[TAINT_NUMBER_OF];
   } tlsPtr_;
 
   // Guards the 'interrupted_' and 'wait_monitor_' members.

@@ -661,14 +661,6 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
   const uint16_t* code_end =
       current_code_item_->insns_ + current_code_item_->insns_size_in_code_units_;
 
-#if ART_TAINTING
-  block_list_.Resize(block_list_.Size() + current_code_item_->insns_size_in_code_units_ * 2);
-  dex_pc_to_block_map_.SetSize(dex_pc_to_block_map_.Size() + current_code_item_->insns_size_in_code_units_ * 2);
-
-  // TODO: replace with explicit resize routine.  Using automatic extension side effect for now.
-  try_block_addr_->SetBit(current_code_item_->insns_size_in_code_units_ * 2);
-  try_block_addr_->ClearBit(current_code_item_->insns_size_in_code_units_ * 2);
-#else
   // TODO: need to rework expansion of block list & try_block_addr when inlining activated.
   // TUNING: use better estimate of basic blocks for following resize.
   block_list_.Resize(block_list_.Size() + current_code_item_->insns_size_in_code_units_);
@@ -677,7 +669,6 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
   // TODO: replace with explicit resize routine.  Using automatic extension side effect for now.
   try_block_addr_->SetBit(current_code_item_->insns_size_in_code_units_);
   try_block_addr_->ClearBit(current_code_item_->insns_size_in_code_units_);
-#endif
 
   // If this is the first method, set up default entry and exit blocks.
   if (current_method_ == 0) {
@@ -732,12 +723,9 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
   while (code_ptr < code_end) {
     MIR *insn = NewMIR();
     insn->offset = current_offset_;
+    // Tainting
+    LOG(INFO) << "Tainting offset: 0x" << std::hex << current_code_item_->insns_ + insn->offset;
     insn->m_unit_index = current_method_;
-#if ART_TAINTING
-    MIR *insn2 = NewMIR();
-    insn2->offset = current_offset_ + 1;
-    insn2->m_unit_index = current_method_;
-#endif
     int width = ParseInsn(code_ptr, &insn->dalvikInsn);
     Instruction::Code opcode = insn->dalvikInsn.opcode;
     if (opcode_count_ != NULL) {
@@ -781,26 +769,10 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
       }
     } else {
       cur_block->AppendMIR(insn);
-#if ART_TAINTING
-      // isRelevant = AnalyzeInsn(insn)
-      // isRelevant --> AddTaintInsn(insn)
-      // fix "width" and/or code_end
-      uint16_t insn2_opcode = 0x60;
-      insn2->dalvikInsn.opcode = static_cast<Instruction::Code>(insn2_opcode & 0xFF);
-      insn2->dalvikInsn.vA = 0;
-      insn2->dalvikInsn.vB = 0;
-      insn2->dalvikInsn.vB_wide = 0;
-      insn2->dalvikInsn.vC = 0;
-      cur_block->AppendMIR(insn2);
-      width += 1;
-#endif
     }
 
     // Associate the starting dex_pc for this opcode with its containing basic block.
     dex_pc_to_block_map_.Put(insn->offset, cur_block->id);
-#if ART_TAINTING
-    dex_pc_to_block_map_.Put(insn2->offset, cur_block->id);
-#endif
 
     code_ptr += width;
 
@@ -843,11 +815,7 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
         punt_to_interpreter_ = true;
       }
     }
-#if ART_TAINTING
-    current_offset_ += width + 1;
-#else
     current_offset_ += width;
-#endif
     BasicBlock* next_block = FindBlock(current_offset_, /* split */ false, /* create */
                                       false, /* immed_pred_block_p */ NULL);
     if (next_block) {
