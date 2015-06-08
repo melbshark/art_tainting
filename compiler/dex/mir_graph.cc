@@ -719,6 +719,11 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
 
   uint64_t merged_df_flags = 0u;
 
+#if ART_TAINTING
+    LOG(INFO) << "ART_TAINTING - dex_file.GetLocation(): " << dex_file.GetLocation();
+    // LOG(INFO) << "Tainting class_def_idx: " << class_def_idx;
+#endif
+
   /* Parse all instructions and put them into containing basic blocks */
   while (code_ptr < code_end) {
     MIR *insn = NewMIR();
@@ -729,6 +734,16 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
     if (opcode_count_ != NULL) {
       opcode_count_[static_cast<int>(opcode)]++;
     }
+#if ART_TAINTING
+    if (opcode == Instruction::NEW_INSTANCE || opcode == Instruction::NEW_ARRAY
+        || opcode == Instruction::FILLED_NEW_ARRAY
+        || opcode == Instruction::FILLED_NEW_ARRAY_RANGE) {
+      insn->code_ptr = code_ptr;
+      LOG(INFO) << "ART_TAINTING - insn->code_ptr (mir_graph.cc): " << std::hex << insn->code_ptr;
+      art_taintings_.insert(std::pair<uint32_t, uint32_t>(*code_ptr, 0));
+      LOG(INFO) << "ART_TAINTING - adding taint for object at address: " << std::hex << code_ptr;
+    }
+#endif
 
     int flags = Instruction::FlagsOf(insn->dalvikInsn.opcode);
     int verify_flags = Instruction::VerifyFlagsOf(insn->dalvikInsn.opcode);

@@ -677,7 +677,11 @@ RegLocation X86Mir2Lir::GenDivRemLit(RegLocation rl_dest, RegLocation rl_src,
     LockTemp(rs_r2);
 
     // Assume that the result will be in EDX.
+#if ART_TAINTING
+    rl_result = {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1, rs_r2, INVALID_SREG, INVALID_SREG, 0};
+#else
     rl_result = {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1, rs_r2, INVALID_SREG, INVALID_SREG};
+#endif
 
     // Numerator into EAX.
     RegStorage numerator_reg;
@@ -792,7 +796,11 @@ RegLocation X86Mir2Lir::GenDivRem(RegLocation rl_dest, RegLocation rl_src1,
   done->target = NewLIR0(kPseudoTargetLabel);
 
   // Result is in EAX for div and EDX for rem.
+#if ART_TAINTING
+  RegLocation rl_result = {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1, rs_r0, INVALID_SREG, INVALID_SREG, 0};
+#else
   RegLocation rl_result = {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1, rs_r0, INVALID_SREG, INVALID_SREG};
+#endif
   if (!is_div) {
     rl_result.reg.SetReg(r2);
   }
@@ -1436,8 +1444,13 @@ bool X86Mir2Lir::GenMulLongConst(RegLocation rl_dest, RegLocation rl_src1, int64
     NewLIR2(kX86Add32RR, rs_r2.GetReg(), rs_r1.GetReg());
 
     // Result is EDX:EAX
+#if ART_TAINTING
+    RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
+                             RegStorage::MakeRegPair(rs_r0, rs_r2), INVALID_SREG, INVALID_SREG, 0};
+#else
     RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
                              RegStorage::MakeRegPair(rs_r0, rs_r2), INVALID_SREG, INVALID_SREG};
+#endif
     StoreValueWide(rl_dest, rl_result);
     return true;
   }
@@ -1574,8 +1587,13 @@ void X86Mir2Lir::GenMulLong(Instruction::Code, RegLocation rl_dest, RegLocation 
   NewLIR2(kX86Add32RR, rs_r2.GetReg(), rs_r1.GetReg());
 
   // Result is EDX:EAX
+#if ART_TAINTING
+  RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
+                           RegStorage::MakeRegPair(rs_r0, rs_r2), INVALID_SREG, INVALID_SREG, 0};
+#else
   RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
                            RegStorage::MakeRegPair(rs_r0, rs_r2), INVALID_SREG, INVALID_SREG};
+#endif
   StoreValueWide(rl_dest, rl_result);
 }
 
@@ -1839,7 +1857,11 @@ void X86Mir2Lir::GenDivRemLongLit(RegLocation rl_dest, RegLocation rl_src,
     Clobber(rs_r2q);
     LockTemp(rs_r2q);
 
+#if ART_TAINTING
+    RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1, rs_r2q, INVALID_SREG, INVALID_SREG, 0};
+#else
     RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1, rs_r2q, INVALID_SREG, INVALID_SREG};
+#endif
 
     // Use H.S.Warren's Hacker's Delight Chapter 10 and
     // T,Grablund, P.L.Montogomery's Division by invariant integers using multiplication.
@@ -1996,7 +2018,11 @@ void X86Mir2Lir::GenDivRemLong(Instruction::Code, RegLocation rl_dest, RegLocati
   done->target = NewLIR0(kPseudoTargetLabel);
 
   // Result is in RAX for div and RDX for rem.
+#if ART_TAINTING
+  RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1, rs_r0q, INVALID_SREG, INVALID_SREG, 0};
+#else
   RegLocation rl_result = {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1, rs_r0q, INVALID_SREG, INVALID_SREG};
+#endif
   if (!is_div) {
     rl_result.reg.SetReg(r2q);
   }

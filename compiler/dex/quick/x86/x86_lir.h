@@ -349,6 +349,29 @@ extern RegStorage rs_rX86_INVOKE_TGT;
 extern RegStorage rs_rX86_COUNT;
 
 // RegisterLocation templates return values (r_V0, or r_V0/r_V1).
+#if ART_TAINTING
+const RegLocation x86_loc_c_return
+    {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k32BitSolo, rAX), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation x86_loc_c_return_wide
+    {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitPair, rAX, rDX), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation x86_loc_c_return_ref
+    {kLocPhysReg, 0, 0, 0, 0, 0, 1, 0, 1,
+     RegStorage(RegStorage::k32BitSolo, rAX), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation x86_64_loc_c_return_ref
+    {kLocPhysReg, 0, 0, 0, 0, 0, 1, 0, 1,
+     RegStorage(RegStorage::k64BitSolo, rAX), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation x86_64_loc_c_return_wide
+    {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitSolo, rAX), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation x86_loc_c_return_float
+    {kLocPhysReg, 0, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k32BitSolo, fr0), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation x86_loc_c_return_double
+    {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitSolo, dr0), INVALID_SREG, INVALID_SREG, 0};
+#else
 const RegLocation x86_loc_c_return
     {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1,
      RegStorage(RegStorage::k32BitSolo, rAX), INVALID_SREG, INVALID_SREG};
@@ -370,6 +393,7 @@ const RegLocation x86_loc_c_return_float
 const RegLocation x86_loc_c_return_double
     {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
      RegStorage(RegStorage::k64BitSolo, dr0), INVALID_SREG, INVALID_SREG};
+#endif
 
 /*
  * The following enum defines the list of supported X86 instructions by the

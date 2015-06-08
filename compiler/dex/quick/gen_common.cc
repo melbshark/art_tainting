@@ -1016,6 +1016,9 @@ void Mir2Lir::GenNewInstance(uint32_t type_idx, RegLocation rl_dest) {
     CallRuntimeHelperImmMethod(kQuickAllocObjectWithAccessCheck, type_idx, true);
   }
   StoreValue(rl_dest, GetReturn(kRefReg));
+#if ART_TAINTING
+  // Tainting: TODO a new object is created, add a taint marker here
+#endif
 }
 
 void Mir2Lir::GenThrow(RegLocation rl_src) {
@@ -1825,6 +1828,10 @@ void Mir2Lir::GenArithOpIntLit(Instruction::Code opcode, RegLocation rl_dest, Re
     OpRegCopy(rl_result.reg, rl_src.reg);
   } else {
     OpRegRegImm(op, rl_result.reg, rl_src.reg, lit);
+#if ART_TAINTING
+    // LOG(DEBUG) << "TAINTING: Adding another add immediate instruction :P";
+    // OpRegRegImm(op, rl_result.reg, rl_result.reg, lit);
+#endif
   }
   StoreValue(rl_dest, rl_result);
 }

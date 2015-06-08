@@ -350,6 +350,21 @@ constexpr RegStorage rs_rD7(RegStorage::kValid | rD7);
 #define rMIPS_COUNT RegStorage::kInvalidRegVal
 
 // RegisterLocation templates return values (r_V0, or r_V0/r_V1).
+#if ART_TAINTING
+const RegLocation mips_loc_c_return
+    {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k32BitSolo, rV0), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips_loc_c_return_wide
+    {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitPair, rV0, rV1), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips_loc_c_return_float
+    {kLocPhysReg, 0, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k32BitSolo, rF0), INVALID_SREG, INVALID_SREG, 0};
+// FIXME: move MIPS to k64Bitsolo for doubles
+const RegLocation mips_loc_c_return_double
+    {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitPair, rF0, rF1), INVALID_SREG, INVALID_SREG, 0};
+#else
 const RegLocation mips_loc_c_return
     {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1,
      RegStorage(RegStorage::k32BitSolo, rV0), INVALID_SREG, INVALID_SREG};
@@ -363,6 +378,7 @@ const RegLocation mips_loc_c_return_float
 const RegLocation mips_loc_c_return_double
     {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
      RegStorage(RegStorage::k64BitPair, rF0, rF1), INVALID_SREG, INVALID_SREG};
+#endif
 
 enum MipsShiftEncodings {
   kMipsLsl = 0x0,

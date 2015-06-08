@@ -669,6 +669,15 @@ void ArmMir2Lir::GenEasyMultiplyTwoOps(RegStorage r_dest, RegStorage r_src, Easy
 bool ArmMir2Lir::EasyMultiply(RegLocation rl_src, RegLocation rl_dest, int lit) {
   EasyMultiplyOp ops[2];
 
+#if ART_TAINTING
+  // prevent warning "maybe-uninitialized" from turning into error if warnings
+  // are treated as errors.
+  ops[0].op = kOpInvalid;
+  ops[0].shift = 0;
+  ops[1].op = kOpInvalid;
+  ops[1].shift = 0;
+#endif
+
   if (!GetEasyMultiplyTwoOps(lit, ops)) {
     return false;
   }

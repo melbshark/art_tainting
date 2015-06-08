@@ -432,8 +432,13 @@ void MIRGraph::DumpRegLocTable(RegLocation* table, int count) {
 }
 
 // FIXME - will likely need to revisit all uses of this.
+#if ART_TAINTING
+static const RegLocation fresh_loc = {kLocDalvikFrame, 0, 0, 0, 0, 0, 0, 0, 0,
+                                      RegStorage(), INVALID_SREG, INVALID_SREG, 0};
+#else
 static const RegLocation fresh_loc = {kLocDalvikFrame, 0, 0, 0, 0, 0, 0, 0, 0,
                                       RegStorage(), INVALID_SREG, INVALID_SREG};
+#endif
 
 void MIRGraph::InitRegLocations() {
   /* Allocate the location map */

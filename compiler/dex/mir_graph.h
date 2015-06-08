@@ -345,6 +345,9 @@ struct MIR {
     }
   } dalvikInsn;
 
+#if ART_TAINTING
+  const uint16_t* code_ptr;
+#endif
   NarrowDexOffset offset;         // Offset of the instruction in code units.
   uint16_t optimization_flags;
   int16_t m_unit_index;           // From which method was this MIR included
@@ -371,6 +374,9 @@ struct MIR {
   explicit MIR():offset(0), optimization_flags(0), m_unit_index(0), bb(NullBasicBlockId),
                  next(nullptr), ssa_rep(nullptr) {
     memset(&meta, 0, sizeof(meta));
+#if ART_TAINTING
+    code_ptr = nullptr;
+#endif
   }
 
   uint32_t GetStartUseIndex() const {
@@ -533,8 +539,13 @@ struct CallInfo {
 };
 
 
+#if ART_TAINTING
+const RegLocation bad_loc = {kLocDalvikFrame, 0, 0, 0, 0, 0, 0, 0, 0, RegStorage(), INVALID_SREG,
+                             INVALID_SREG, 0};
+#else
 const RegLocation bad_loc = {kLocDalvikFrame, 0, 0, 0, 0, 0, 0, 0, 0, RegStorage(), INVALID_SREG,
                              INVALID_SREG};
+#endif
 
 class MIRGraph {
  public:
@@ -568,6 +579,12 @@ class MIRGraph {
   const uint16_t* GetCurrentInsns() const {
     return current_code_item_->insns_;
   }
+
+#if ART_TAINTING
+  std::map<uint32_t, uint32_t> GetArtTaintings() {
+    return art_taintings_;
+  }
+#endif
 
   const uint16_t* GetInsns(int m_unit_index) const {
     return m_units_[m_unit_index]->GetCodeItem()->insns_;
@@ -1200,6 +1217,10 @@ class MIRGraph {
   GrowableArray<MirMethodLoweringInfo> method_lowering_infos_;
   static const uint64_t oat_data_flow_attributes_[kMirOpLast];
   GrowableArray<BasicBlock*> gen_suspend_test_list_;  // List of blocks containing suspend tests
+
+#if ART_TAINTING
+  std::map<uint32_t, uint32_t> art_taintings_;
+#endif
 
   friend class ClassInitCheckEliminationTest;
   friend class GlobalValueNumberingTest;

@@ -53,6 +53,10 @@ struct RegLocation {
   int16_t s_reg_low;    // SSA name for low Dalvik word.
   int16_t orig_sreg;    // TODO: remove after Bitcode gen complete
                         // and consolidate usage w/ s_reg_low.
+
+#if ART_TAINTING
+  uint32_t taint;
+#endif
 };
 
 }  // namespace art

@@ -397,6 +397,11 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
   DCHECK(CheckCorePoolSanity()) << PrettyMethod(cu_->method_idx, *cu_->dex_file) << " @ 0x:"
                                 << std::hex << current_dalvik_offset_;
 
+#if ART_TAINTING
+  std::map<uint32_t, uint32_t> art_taintings = mir_graph_->GetArtTaintings();
+  std::map<uint32_t, uint32_t>::iterator it;
+#endif
+
   // Prep Src and Dest locations.
   int next_sreg = 0;
   int next_loc = 0;
@@ -544,6 +549,15 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
       break;
 
     case Instruction::NEW_INSTANCE:
+#if ART_TAINTING
+      LOG(INFO) << "ART_TAINTING - mir->code_ptr: " << std::hex << mir->code_ptr;
+      it = art_taintings.find(*mir->code_ptr);
+      if (mir->code_ptr != nullptr && it == art_taintings.end()) {
+        LOG(INFO) << "ART_TAINTING - could not find tainting at address: " << std::hex << mir->code_ptr;
+      } else {
+        rl_dest.taint = it->second;
+      }
+#endif
       GenNewInstance(vB, rl_dest);
       break;
 
