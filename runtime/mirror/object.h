@@ -110,6 +110,12 @@ class MANAGED LOCKABLE Object {
     return OFFSET_OF_OBJECT_MEMBER(Object, monitor_);
   }
 
+#if ART_TAINTING
+  // static MemberOffset TaintOffset() {
+  //   return OFFSET_OF_OBJECT_MEMBER(Object, x_taint_);
+  // }
+#endif
+
   // As_volatile can be false if the mutators are suspended. This is an optimization since it
   // avoids the barriers.
   LockWord GetLockWord(bool as_volatile) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
@@ -406,6 +412,11 @@ class MANAGED LOCKABLE Object {
   HeapReference<Class> klass_;
   // Monitor and hash code information.
   uint32_t monitor_;
+
+#if ART_TAINTING
+  // uint32_t x_taint_ = 0;
+  // uint32_t x_xpadding_;    // For 8-byte alignment. TODO: get rid of this.
+#endif
 
 #ifdef USE_BAKER_OR_BROOKS_READ_BARRIER
   // Note names use a 'x' prefix and the x_rb_ptr_ is of type int

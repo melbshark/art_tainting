@@ -1712,6 +1712,12 @@ void Mir2Lir::GenInvoke(CallInfo* info) {
     return;
   }
   GenInvokeNoInline(info);
+#if ART_TAINTING
+  LOG(INFO) << "ART_TAINTING - info->result.taint (GenInvoke): " << info->result.taint;
+  for (int i = 0; i < info->num_arg_words; i++) {
+    LOG(INFO) << "ART_TAINTING - info->args[" << i << "].taint (GenInvoke): " << info->args[i].taint;
+  }
+#endif
 }
 
 static LIR* GenInvokeNoInlineCall(Mir2Lir* mir_to_lir, InvokeType type) {

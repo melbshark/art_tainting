@@ -59,6 +59,22 @@ void MirIFieldLoweringInfo::Resolve(CompilerDriver* compiler_driver,
     if (UNLIKELY(resolved_field == nullptr)) {
       continue;
     }
+#if ART_TAINTING
+    CompilationUnit* cu = mUnit->GetCompilationUnit();
+    if (cu->taint_field_idx >= 0) {
+      LOG(INFO) << "ART_TAINTING - Tainting field of index: " << cu->taint_field_idx;
+      mirror::ArtField* taint_resolved_field = compiler_driver->ResolveField(soa, dex_cache, class_loader, mUnit, cu->taint_field_idx, false);
+      if (LIKELY(taint_resolved_field != nullptr)) {
+        cu->taint_field_offset = taint_resolved_field->GetOffset().Uint32Value();
+        LOG(INFO) << "ART_TAINTING - Taint field offset: " << cu->taint_field_offset;
+      } else {
+        cu->taint_field_idx = -1;
+        LOG(ERROR) << "ART_TAINTING - Taint field could not be resolved!";
+      }
+    } else {
+      LOG(ERROR) << "ART_TAINTING - cu->tainit_field_idx not set!";
+    }
+#endif
     compiler_driver->GetResolvedFieldDexFileLocation(resolved_field,
         &it->declaring_dex_file_, &it->declaring_class_idx_, &it->declaring_field_idx_);
     bool is_volatile = compiler_driver->IsFieldVolatile(resolved_field);

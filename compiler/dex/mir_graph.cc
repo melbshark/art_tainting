@@ -32,6 +32,13 @@
 
 namespace art {
 
+#if ART_TAINTING
+std::ostream& operator<<(std::ostream& os, const ClassMethodIndex& value) {
+  os << value.class_def_idx_ << " " << value.method_idx_ << " " << value.offset_;
+  return os;
+}
+#endif
+
 #define MAX_PATTERN_LEN 5
 
 const char* MIRGraph::extended_mir_op_names_[kMirOpLast - kMirOpFirst] = {
@@ -132,6 +139,14 @@ MIRGraph::MIRGraph(CompilationUnit* cu, ArenaAllocator* arena)
 
 MIRGraph::~MIRGraph() {
   STLDeleteElements(&m_units_);
+#if ART_TAINTING
+  if (art_taintings_ != nullptr) {
+    delete art_taintings_;
+  }
+  if (art_taintings2_ != nullptr) {
+    delete art_taintings2_;
+  }
+#endif
 }
 
 /*
@@ -720,8 +735,28 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
   uint64_t merged_df_flags = 0u;
 
 #if ART_TAINTING
-    LOG(INFO) << "ART_TAINTING - dex_file.GetLocation(): " << dex_file.GetLocation();
-    // LOG(INFO) << "Tainting class_def_idx: " << class_def_idx;
+  LOG(INFO) << "ART_TAINTING - dex_file.GetLocation(): " << dex_file.GetLocation();
+  // LOG(INFO) << "Tainting class_def_idx: " << class_def_idx;
+  if (art_taintings_ == nullptr) {
+    art_taintings_ = new std::map<uint32_t, uint32_t>();
+  }
+  // if (art_taintings2_ == nullptr) {
+  //   art_taintings2_ = new std::map<ClassMethodIndex, uint32_t>();
+  // }
+  const DexFile::ClassDef& class_def = dex_file.GetClassDef(class_def_idx);
+  LOG(INFO) << "ART_TAINTING - taint field name: " << ART_TAINTING_FIELD_NAME;
+  for (size_t i = 0; i < dex_file.NumFieldIds(); i++) {
+    LOG(INFO) << "ART_TAINTING - looking for taint field number";
+    const DexFile::FieldId& field_id = dex_file.GetFieldId(i);
+    std::string field_name(dex_file.GetFieldName(field_id));
+    LOG(INFO) << "ART_TAINTING - field_nr=" << i << "\tfield_name=" << field_name;
+    LOG(INFO) << "ART_TAINTING - class_def.class_idx_=" << class_def.class_idx_ << "\tfield_id.class_idx_=" << field_id.class_idx_;
+    if (class_def.class_idx_ == field_id.class_idx_
+        && !field_name.compare(ART_TAINTING_FIELD_NAME)) {
+      cu_->taint_field_idx = i;
+      LOG(INFO) << "ART_TAINTING - found taint field number (cu_->taint_field_idx): " << cu_->taint_field_idx;
+    }
+  }
 #endif
 
   /* Parse all instructions and put them into containing basic blocks */
@@ -735,13 +770,19 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
       opcode_count_[static_cast<int>(opcode)]++;
     }
 #if ART_TAINTING
+    insn->code_ptr = code_ptr;
+    LOG(INFO) << "ART_TAINTING - insn->code_ptr (mir_graph.cc): " << std::hex << insn->code_ptr;
+    LOG(INFO) << "ART_TAINTING - insn->vA (mir_graph.cc): " << insn->dalvikInsn.vA;
+    LOG(INFO) << "ART_TAINTING - insn->vB (mir_graph.cc): " << insn->dalvikInsn.vB;
+    LOG(INFO) << "ART_TAINTING - insn->vC (mir_graph.cc): " << insn->dalvikInsn.vC;
     if (opcode == Instruction::NEW_INSTANCE || opcode == Instruction::NEW_ARRAY
         || opcode == Instruction::FILLED_NEW_ARRAY
         || opcode == Instruction::FILLED_NEW_ARRAY_RANGE) {
-      insn->code_ptr = code_ptr;
-      LOG(INFO) << "ART_TAINTING - insn->code_ptr (mir_graph.cc): " << std::hex << insn->code_ptr;
-      art_taintings_.insert(std::pair<uint32_t, uint32_t>(*code_ptr, 0));
+      art_taintings_->insert(std::pair<uint32_t, uint32_t>(*code_ptr, 1));
       LOG(INFO) << "ART_TAINTING - adding taint for object at address: " << std::hex << code_ptr;
+      // struct ClassMethodIndex cm_idx = {class_def_idx, method_idx, insn->offset};
+      // art_taintings2_->insert(std::pair<ClassMethodIndex, uint32_t>(cm_idx, 1));
+      // LOG(INFO) << "ART_TAINTING - adding taint for object at index: " << cm_idx;
     }
 #endif
 
@@ -856,6 +897,18 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
   if (cu_->enable_debug & (1 << kDebugDumpCFG)) {
     DumpCFG("/sdcard/1_post_parse_cfg/", true);
   }
+
+#if ART_TAINTING
+  // MIR *mir;
+  // for (mir = cur_block->first_mir_insn; mir != NULL; mir = mir->next) {
+  //   if (mir->dalvikInsn.opcode == Instruction::NEW_INSTANCE) {
+  //     BasicBlock* new_block = FindBlock(mir->offset, true, true, &cur_block);
+  //     LOG(INFO) << "ART_TAINTING - new_block->id: " << new_block->id;
+  //     cur_block->fall_through = new_block->id;
+  //     new_block->predecessors->Insert(cur_block->id);
+  //   }
+  // }
+#endif
 
   if (cu_->verbose) {
     DumpMIRGraph();

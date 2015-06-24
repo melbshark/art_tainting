@@ -89,6 +89,10 @@ struct CompilationUnit {
   std::unique_ptr<Backend> cg;           // Target-specific codegen.
   TimingLogger timings;
   bool print_pass;                 // Do we want to print a pass or not?
+#if ART_TAINTING
+  int taint_field_idx = -1;        // the number for the current method's object's "__taint__" field 
+  uint32_t taint_field_offset;
+#endif
 };
 
 }  // namespace art

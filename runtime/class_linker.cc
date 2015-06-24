@@ -5396,6 +5396,10 @@ bool ClassLinker::LinkFields(Handle<mirror::Class> klass, bool is_static, size_t
   mirror::ObjectArray<mirror::ArtField>* fields =
       is_static ? klass->GetSFields() : klass->GetIFields();
 
+#ifdef ART_TAINTING
+  // LOG(INFO) << "ART_TAINTING - PrettyClass(klass.Get()):" << PrettyClass(klass.Get());
+#endif
+
   // Initialize field_offset
   MemberOffset field_offset(0);
   if (is_static) {
@@ -5488,6 +5492,11 @@ bool ClassLinker::LinkFields(Handle<mirror::Class> klass, bool is_static, size_t
   }
 
   size_t size = field_offset.Uint32Value();
+
+#ifdef ART_TAINTING
+  // size += 8;
+#endif
+
   // Update klass
   if (is_static) {
     klass->SetNumReferenceStaticFields(num_reference_fields);

@@ -772,6 +772,7 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
   const MirIFieldLoweringInfo& field_info = mir_graph_->GetIFieldLoweringInfo(mir);
   cu_->compiler_driver->ProcessedInstanceField(field_info.FastPut());
   OpSize store_size = LoadStoreOpSize(is_long_or_double, is_object);
+
   if (!SLOW_FIELD_PATH && field_info.FastPut()) {
     RegisterClass reg_class = RegClassForFieldLoadStore(store_size, field_info.IsVolatile());
     // Dex code never writes to the class field.
@@ -804,6 +805,28 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
     CallRuntimeHelperImmRegLocationRegLocation(target, field_info.FieldIndex(), rl_obj, rl_src,
                                                true);
   }
+
+#if ART_TAINTING
+  if (cu_->taint_field_idx >= 0 &&
+      rl_obj.s_reg_low != INVALID_SREG && rl_obj.taint != 0) {
+    // load the new taint value into a register
+    RegStorage reg_taint_new_value = AllocTemp();
+    LoadConstant(reg_taint_new_value, rl_obj.taint);
+
+    // load the already stored value into a register
+    RegStorage reg_taint_value = AllocTemp();
+    LoadBaseDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_value, OpSize::kWord, kNotVolatile);
+
+    // logical OR both values
+    NewLIR4(kThumb2OrrRRR, reg_taint_new_value.GetReg(), reg_taint_new_value.GetReg(), reg_taint_value.GetReg(), 0);
+
+    // store the combined taint value into the object's taint field
+    StoreBaseDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_new_value, OpSize::kWord, kNotVolatile);
+    FreeTemp(reg_taint_value);
+    FreeTemp(reg_taint_new_value);
+    LOG(INFO) << "ART_TAINTING: Tainting field with offset: " << cu_->taint_field_offset;
+  }
+#endif
 }
 
 void Mir2Lir::GenArrayObjPut(int opt_flags, RegLocation rl_array, RegLocation rl_index,
@@ -1016,9 +1039,6 @@ void Mir2Lir::GenNewInstance(uint32_t type_idx, RegLocation rl_dest) {
     CallRuntimeHelperImmMethod(kQuickAllocObjectWithAccessCheck, type_idx, true);
   }
   StoreValue(rl_dest, GetReturn(kRefReg));
-#if ART_TAINTING
-  // Tainting: TODO a new object is created, add a taint marker here
-#endif
 }
 
 void Mir2Lir::GenThrow(RegLocation rl_src) {
@@ -1828,10 +1848,6 @@ void Mir2Lir::GenArithOpIntLit(Instruction::Code opcode, RegLocation rl_dest, Re
     OpRegCopy(rl_result.reg, rl_src.reg);
   } else {
     OpRegRegImm(op, rl_result.reg, rl_src.reg, lit);
-#if ART_TAINTING
-    // LOG(DEBUG) << "TAINTING: Adding another add immediate instruction :P";
-    // OpRegRegImm(op, rl_result.reg, rl_result.reg, lit);
-#endif
   }
   StoreValue(rl_dest, rl_result);
 }
