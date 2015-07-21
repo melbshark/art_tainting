@@ -38,42 +38,6 @@
 
 namespace art {
 
-#if ART_TAINTING
-struct ClassMethodIndex
-{
-  ClassMethodIndex(uint16_t class_def_idx, uint32_t method_idx,
-                   NarrowDexOffset offset)
-    : class_def_idx_(class_def_idx), method_idx_(method_idx),
-      offset_(offset) {}
-
-  bool operator<(const ClassMethodIndex& value) const {
-    if (value.class_def_idx_ != class_def_idx_) {
-      return value.class_def_idx_ < class_def_idx_;
-    }
-    if (value.method_idx_ != method_idx_) {
-      return value.method_idx_ < method_idx_;
-    }
-    return value.offset_ < offset_;
-  }
-
-  bool operator>(const ClassMethodIndex& value) const {
-    if (value.class_def_idx_ != class_def_idx_) {
-      return value.class_def_idx_ > class_def_idx_;
-    }
-    if (value.method_idx_ != method_idx_) {
-      return value.method_idx_ > method_idx_;
-    }
-    return value.offset_ > offset_;
-  }
-
-  uint16_t class_def_idx_;
-  uint32_t method_idx_;
-  NarrowDexOffset offset_;
-};
-
-std::ostream& operator<<(std::ostream& os, const ClassMethodIndex& value);
-#endif
-
 class GlobalValueNumbering;
 
 enum InstructionAnalysisAttributePos {
@@ -623,9 +587,6 @@ class MIRGraph {
 #if ART_TAINTING
   std::map<uint32_t, uint32_t>* GetArtTaintings() {
     return art_taintings_;
-  }
-  std::map<ClassMethodIndex, uint32_t>* GetArtTaintings2() {
-    return art_taintings2_;
   }
 #endif
 
@@ -1265,7 +1226,6 @@ class MIRGraph {
 
 #if ART_TAINTING
   std::map<uint32_t, uint32_t>* art_taintings_ = nullptr;
-  std::map<ClassMethodIndex, uint32_t>* art_taintings2_ = nullptr;
   friend class Mir2Lir;
 #endif
 

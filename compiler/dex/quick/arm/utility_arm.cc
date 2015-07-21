@@ -816,15 +816,6 @@ LIR* ArmMir2Lir::StoreBaseIndexed(RegStorage r_base, RegStorage r_index, RegStor
     store = NewLIR3(opcode, r_src.GetReg(), r_base.GetReg(), r_index.GetReg());
   else
     store = NewLIR4(opcode, r_src.GetReg(), r_base.GetReg(), r_index.GetReg(), scale);
-
-#if ART_TAINTING
-  LOG(INFO) << "ART_TAINTING - store->offset: " << store->offset;
-  LOG(INFO) << "ART_TAINTING - store->dalvik_offset: " << store->dalvik_offset;
-  LOG(INFO) << "ART_TAINTING - store->opcode: " << store->opcode;
-  LOG(INFO) << "ART_TAINTING - r_base.GetReg(): " << r_base.GetReg();
-  LOG(INFO) << "ART_TAINTING - r_src.GetReg(): " << r_src.GetReg();
-  LOG(INFO) << "ART_TAINTING - r_index.GetReg(): " << r_index.GetReg();
-#endif
   return store;
 }
 
@@ -967,15 +958,6 @@ LIR* ArmMir2Lir::LoadBaseDispBody(RegStorage r_base, int displacement, RegStorag
     DCHECK(r_base == rs_rARM_SP);
     AnnotateDalvikRegAccess(load, displacement >> 2, true /* is_load */, r_dest.Is64Bit());
   }
-#if ART_TAINTING
-  if (r_base == rs_rARM_SELF && displacement == 124) {
-    LOG(INFO) << "ART_TAINTING - load->offset: " << load->offset;
-    LOG(INFO) << "ART_TAINTING - load->dalvik_offset: " << load->dalvik_offset;
-    LOG(INFO) << "ART_TAINTING - load->opcode: " << load->opcode;
-    LOG(INFO) << "ART_TAINTING - r_base.GetReg(): " << r_base.GetReg();
-    LOG(INFO) << "ART_TAINTING - r_dest.GetReg(): " << r_dest.GetReg();
-  }
-#endif
   return load;
 }
 

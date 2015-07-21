@@ -533,9 +533,14 @@ void Mir2Lir::GenSput(MIR* mir, RegLocation rl_src, bool is_long_or_double,
   const MirSFieldLoweringInfo& field_info = mir_graph_->GetSFieldLoweringInfo(mir);
   cu_->compiler_driver->ProcessedStaticField(field_info.FastPut(), field_info.IsReferrersClass());
   OpSize store_size = LoadStoreOpSize(is_long_or_double, is_object);
+#if ART_TAINTING
+  RegStorage r_base;
+#endif
   if (!SLOW_FIELD_PATH && field_info.FastPut()) {
     DCHECK_GE(field_info.FieldOffset().Int32Value(), 0);
+#if !ART_TAINTING
     RegStorage r_base;
+#endif
     if (field_info.IsReferrersClass()) {
       // Fast path, static storage base is this method's class
       RegLocation rl_method = LoadCurrMethod();
@@ -607,6 +612,34 @@ void Mir2Lir::GenSput(MIR* mir, RegLocation rl_src, bool is_long_or_double,
     if (is_object && !mir_graph_->IsConstantNullRef(rl_src)) {
       MarkGCCard(rl_src.reg, r_base);
     }
+
+#if ART_TAINTING && 0
+    std::map<uint16_t, int>::iterator sfields_it = art_taintings_sfields_.find(cu_->class_def_idx);
+    if (sfields_it != art_taintings_sfields_.end()
+        && rl_src.s_reg_low != INVALID_SREG) {
+      VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
+      StoreRefDisp(r_base, cu_->taint_field_offset, rl_src.reg, kNotVolatile);
+  
+      // load the new taint value into a register
+      RegStorage reg_taint_new_value = AllocTemp();
+      LoadConstant(reg_taint_new_value, sfields_it->second);
+  
+      // load the already stored value into a register
+      RegStorage reg_taint_value = AllocTemp();
+      LoadBaseDisp(r_base, cu_->taint_field_offset, reg_taint_value, OpSize::kWord, kNotVolatile);
+      VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
+  
+      // logical OR both values
+      NewLIR4(kThumb2OrrRRR, reg_taint_new_value.GetReg(), reg_taint_new_value.GetReg(), reg_taint_value.GetReg(), 0);
+  
+      // store the combined taint value into the object's taint field
+      VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
+      StoreBaseDisp(r_base, cu_->taint_field_offset, reg_taint_new_value, OpSize::kWord, kNotVolatile);
+      VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
+      FreeTemp(reg_taint_value);
+      FreeTemp(reg_taint_new_value);
+    }
+#endif
     FreeTemp(r_base);
   } else {
     FlushAllRegs();  // Everything to home locations
@@ -824,7 +857,7 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
     StoreBaseDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_new_value, OpSize::kWord, kNotVolatile);
     FreeTemp(reg_taint_value);
     FreeTemp(reg_taint_new_value);
-    LOG(INFO) << "ART_TAINTING: Tainting field with offset: " << cu_->taint_field_offset;
+    VLOG(compiler) << "ART_TAINTING: Tainting field with offset: " << cu_->taint_field_offset;
   }
 #endif
 }
