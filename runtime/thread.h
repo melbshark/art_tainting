@@ -573,13 +573,6 @@ class Thread {
         OFFSETOF_MEMBER(tls_ptr_sized_values, suspend_trigger));
   }
 
-#if ART_TAINTING
-  template<size_t pointer_size>
-  static ThreadOffset<pointer_size> TaintTableOffset() {
-    return ThreadOffsetFromTlsPtr<pointer_size>(OFFSETOF_MEMBER(tls_ptr_sized_values, taint_table));
-  }
-#endif
-
   // Size of stack less any space reserved for stack overflow
   size_t GetStackSize() const {
     return tlsPtr_.stack_size - (tlsPtr_.stack_end - tlsPtr_.stack_begin);
@@ -1027,11 +1020,7 @@ class Thread {
   } tls64_;
 
   struct PACKED(4) tls_ptr_sized_values {
-#if ART_TAINTING
-      tls_ptr_sized_values() : card_table(nullptr), taint_table(nullptr), exception(nullptr), stack_end(nullptr),
-#else
       tls_ptr_sized_values() : card_table(nullptr), exception(nullptr), stack_end(nullptr),
-#endif
       managed_stack(), suspend_trigger(nullptr), jni_env(nullptr), self(nullptr), opeer(nullptr),
       jpeer(nullptr), stack_begin(nullptr), stack_size(0), throw_location(),
       stack_trace_sample(nullptr), wait_next(nullptr), monitor_enter_object(nullptr),
@@ -1045,11 +1034,6 @@ class Thread {
 
     // The biased card table, see CardTable for details.
     byte* card_table;
-
-#if ART_TAINTING
-    // The biased taint table, similar to card_table
-    byte* taint_table;
-#endif
 
     // The pending exception or NULL.
     mirror::Throwable* exception;
