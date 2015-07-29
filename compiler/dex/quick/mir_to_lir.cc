@@ -553,14 +553,15 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
 
     case Instruction::NEW_INSTANCE:
 #if ART_TAINTING
-      VLOG(compiler) << "ART_TAINTING - cu_->class_def_idx: " << cu_->class_def_idx << "\tcu_->method_idx: " << cu_->method_idx;
-      VLOG(compiler) << "ART_TAINTING - mir->offset: " << mir->offset;
+      // VLOG(compiler) << "ART_TAINTING - cu_->class_def_idx: " << cu_->class_def_idx << "\tcu_->method_idx: " << cu_->method_idx;
+      // VLOG(compiler) << "ART_TAINTING - mir->offset: " << mir->offset;
       if (art_taintings != nullptr && mir->code_ptr != nullptr) {
         VLOG(compiler) << "ART_TAINTING - mir->code_ptr: " << std::hex << mir->code_ptr;
         it = art_taintings->find(*mir->code_ptr);
         if (it == art_taintings->end()) {
           VLOG(compiler) << "ART_TAINTING - could not find tainting at address: " << std::hex << mir->code_ptr;
         } else {
+          // taint the virtual dalvik registers
           rl_result.taint = it->second;
           rl_dest.taint = it->second;
           rl_src[0].taint = it->second;
@@ -577,20 +578,20 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
 
           if (mir->next != nullptr) {
             if (mir->next->dalvikInsn.opcode == Instruction::INVOKE_DIRECT) {
-              art_taintings->insert(std::pair<uint32_t, uint32_t>(*mir->next->code_ptr, 1));
+              art_taintings->insert(std::pair<uint32_t, uint32_t>(*mir->next->code_ptr, it->second));
               VLOG(compiler) << "ART_TAINTING - adding taint for object at address: " << std::hex << mir->next->code_ptr;
             }
           }
 
-          for (int i = 0; i < mir->ssa_rep->num_defs; ++i) {
-            VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->defs[" << i << "]: " << mir->ssa_rep->defs[i];
-          }
-          for (int i = 0; i < mir->ssa_rep->num_uses; ++i) {
-            VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->uses[" << i << "]: " << mir->ssa_rep->uses[i];
-          }
-          VLOG(compiler) << "ART_TAINTING - rl_dest.s_reg_low: " << rl_dest.s_reg_low;
-          VLOG(compiler) << "ART_TAINTING - rl_dest.orig_sreg: " << rl_dest.orig_sreg;
-          VLOG(compiler) << "ART_TAINTING - rl_dest.location: " << rl_dest.location;
+          // for (int i = 0; i < mir->ssa_rep->num_defs; ++i) {
+          //   VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->defs[" << i << "]: " << mir->ssa_rep->defs[i];
+          // }
+          // for (int i = 0; i < mir->ssa_rep->num_uses; ++i) {
+          //   VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->uses[" << i << "]: " << mir->ssa_rep->uses[i];
+          // }
+          // VLOG(compiler) << "ART_TAINTING - rl_dest.s_reg_low: " << rl_dest.s_reg_low;
+          // VLOG(compiler) << "ART_TAINTING - rl_dest.orig_sreg: " << rl_dest.orig_sreg;
+          // VLOG(compiler) << "ART_TAINTING - rl_dest.location: " << rl_dest.location;
         }
       } else {
         VLOG(compiler) << "ART_TAINTING - mir->code_ptr not set!";
@@ -918,11 +919,11 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
           VLOG(compiler) << "ART_TAINTING - &call_info->result.taint: " << std::hex << &call_info->result.taint;
           for (int i = 0; i < mir->ssa_rep->num_defs; i++) {
             VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->defs[" << i << "]: " << mir->ssa_rep->defs[i];
-            mir_graph_->reg_location_[mir->ssa_rep->defs[i]].taint = 1;
+            mir_graph_->reg_location_[mir->ssa_rep->defs[i]].taint = it->second;
           }
           for (int i = 0; i < mir->ssa_rep->num_uses; i++) {
             VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->uses[" << i << "]: " << mir->ssa_rep->uses[i];
-            mir_graph_->reg_location_[mir->ssa_rep->uses[i]].taint = 1;
+            mir_graph_->reg_location_[mir->ssa_rep->uses[i]].taint = it->second;
           }
         }
       } else {

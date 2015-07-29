@@ -725,7 +725,6 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
   uint64_t merged_df_flags = 0u;
 
 #if ART_TAINTING
-  VLOG(compiler) << "ART_TAINTING - dex_file.GetLocation(): " << dex_file.GetLocation();
   if (art_taintings_ == nullptr) {
     art_taintings_ = new std::map<uint32_t, uint32_t>();
   }
@@ -872,18 +871,6 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
   if (cu_->enable_debug & (1 << kDebugDumpCFG)) {
     DumpCFG("/sdcard/1_post_parse_cfg/", true);
   }
-
-#if ART_TAINTING
-  // MIR *mir;
-  // for (mir = cur_block->first_mir_insn; mir != NULL; mir = mir->next) {
-  //   if (mir->dalvikInsn.opcode == Instruction::NEW_INSTANCE) {
-  //     BasicBlock* new_block = FindBlock(mir->offset, true, true, &cur_block);
-  //     VLOG(compiler) << "ART_TAINTING - new_block->id: " << new_block->id;
-  //     cur_block->fall_through = new_block->id;
-  //     new_block->predecessors->Insert(cur_block->id);
-  //   }
-  // }
-#endif
 
   if (cu_->verbose) {
     DumpMIRGraph();

@@ -1518,10 +1518,6 @@ static int dex2oat(int argc, char** argv) {
     }
   }
 
-#if ART_TAINTING
-  VLOG(compiler) << "ART_TAINTING - boot_image_filename: " << boot_image_filename;
-  VLOG(compiler) << "ART_TAINTING - boot_image_option: " << boot_image_option;
-#endif
   // Fill some values into the key-value store for the oat header.
   std::unique_ptr<SafeMap<std::string, std::string> > key_value_store(
       new SafeMap<std::string, std::string>());
