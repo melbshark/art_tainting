@@ -886,6 +886,9 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
 
     // load the already stored value into a register
     RegStorage reg_taint_value = AllocTemp();
+    // if (cu_->taint_field_idx == 6409) {
+    //   cu_->taint_field_offset = 8;
+    // }
     LoadBaseDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_value, OpSize::kWord, kNotVolatile);
 
     // non-exclusive logical OR both values
