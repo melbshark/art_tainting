@@ -161,6 +161,11 @@ MIRGraph::MIRGraph(CompilationUnit* cu, ArenaAllocator* arena)
 MIRGraph::~MIRGraph() {
   STLDeleteElements(&block_list_);
   STLDeleteElements(&m_units_);
+#if ART_TAINTING
+  if (art_taintings_ != nullptr) {
+    delete art_taintings_;
+  }
+#endif
 }
 
 /*
@@ -757,6 +762,23 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
 
   uint64_t merged_df_flags = 0u;
 
+#if ART_TAINTING
+  if (art_taintings_ == nullptr) {
+    art_taintings_ = new std::map<uint32_t, uint32_t>();
+  }
+  const DexFile::ClassDef& class_def = dex_file.GetClassDef(class_def_idx);
+  VLOG(compiler) << "ART_TAINTING - looking for taint field number of field: " << ART_TAINTING_FIELD_NAME;
+  for (size_t i = 0; i < dex_file.NumFieldIds(); i++) {
+    const DexFile::FieldId& field_id = dex_file.GetFieldId(i);
+    std::string field_name(dex_file.GetFieldName(field_id));
+    if (class_def.class_idx_ == field_id.class_idx_
+        && !field_name.compare(ART_TAINTING_FIELD_NAME)) {
+      cu_->taint_field_idx = i;
+      VLOG(compiler) << "ART_TAINTING - found taint field number (cu_->taint_field_idx): " << cu_->taint_field_idx;
+    }
+  }
+#endif
+
   /* Parse all instructions and put them into containing basic blocks */
   while (code_ptr < code_end) {
     MIR *insn = NewMIR();
@@ -767,6 +789,14 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
     if (opcode_count_ != nullptr) {
       opcode_count_[static_cast<int>(opcode)]++;
     }
+
+#if ART_TAINTING
+    insn->code_ptr = code_ptr;
+    if (opcode == Instruction::NEW_INSTANCE) {
+      art_taintings_->insert(std::pair<uint32_t, uint32_t>(*code_ptr, 1));
+      VLOG(compiler) << "ART_TAINTING - adding taint for object at address: " << std::hex << code_ptr;
+    }
+#endif
 
     int flags = insn->dalvikInsn.FlagsOf();
     int verify_flags = Instruction::VerifyFlagsOf(insn->dalvikInsn.opcode);

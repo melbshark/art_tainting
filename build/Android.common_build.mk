@@ -197,7 +197,8 @@ art_cflags := \
   -Wshadow \
   -Wunused \
   -fvisibility=protected \
-  $(art_default_gc_type_cflags)
+  $(art_default_gc_type_cflags) \
+  -DART_TAINTING=1
 
 # Missing declarations: too many at the moment, as we use "extern" quite a bit.
 #  -Wmissing-declarations \

@@ -203,6 +203,11 @@ struct CompilationUnit {
    * the pass name.
    */
   SafeMap<const std::string, const OptionContent> overridden_pass_options;
+
+#if ART_TAINTING
+  int taint_field_idx = -1;        // the number for the current method's object's "__taint__" field 
+  uint32_t taint_field_offset;
+#endif
 };
 
 }  // namespace art

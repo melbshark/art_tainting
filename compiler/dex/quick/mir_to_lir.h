@@ -1805,6 +1805,10 @@ class Mir2Lir {
     MIR* current_mir_;
     size_t estimated_native_code_size_;     // Just an estimate; used to reserve code_buffer_ size.
     std::unique_ptr<RegisterPool> reg_pool_;
+
+#if ART_TAINTING
+    std::map<uint16_t, int> art_taintings_sfields_;
+#endif
     /*
      * Sanity checking for the register temp tracking.  The same ssa
      * name should never be associated with one temp register per

@@ -183,6 +183,18 @@ constexpr RegStorage rs_wsp(RegStorage::kValid | rwsp);
 constexpr RegStorage rs_wLR(RegStorage::kValid | rwLR);
 
 // RegisterLocation templates return values (following the hard-float calling convention).
+#if ART_TAINTING
+const RegLocation arm_loc_c_return =
+    {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1, rs_w0, INVALID_SREG, INVALID_SREG, 0};
+const RegLocation arm_loc_c_return_ref =
+    {kLocPhysReg, 0, 0, 0, 0, 0, 1, 0, 1, rs_x0, INVALID_SREG, INVALID_SREG, 0};
+const RegLocation arm_loc_c_return_wide =
+    {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1, rs_x0, INVALID_SREG, INVALID_SREG, 0};
+const RegLocation arm_loc_c_return_float =
+    {kLocPhysReg, 0, 0, 0, 1, 0, 0, 0, 1, rs_f0, INVALID_SREG, INVALID_SREG, 0};
+const RegLocation arm_loc_c_return_double =
+    {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1, rs_d0, INVALID_SREG, INVALID_SREG, 0};
+#else
 const RegLocation a64_loc_c_return =
     {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1, rs_w0, INVALID_SREG, INVALID_SREG};
 const RegLocation a64_loc_c_return_ref =
@@ -193,6 +205,7 @@ const RegLocation a64_loc_c_return_float =
     {kLocPhysReg, 0, 0, 0, 1, 0, 0, 0, 1, rs_f0, INVALID_SREG, INVALID_SREG};
 const RegLocation a64_loc_c_return_double =
     {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1, rs_d0, INVALID_SREG, INVALID_SREG};
+#endif
 
 /**
  * @brief Shift-type to be applied to a register via EncodeShift().

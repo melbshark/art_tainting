@@ -32,6 +32,10 @@
 #include "reg_storage.h"
 #include "utils/arena_bit_vector.h"
 
+#if ART_TAINTING
+#define ART_TAINTING_FIELD_NAME "__taint__"
+#endif
+
 namespace art {
 
 struct CompilationUnit;
@@ -319,6 +323,9 @@ class MIR : public ArenaObject<kArenaAllocMIR> {
     int FlagsOf() const;
   } dalvikInsn;
 
+#if ART_TAINTING
+  const uint16_t* code_ptr;
+#endif
   NarrowDexOffset offset;         // Offset of the instruction in code units.
   uint16_t optimization_flags;
   int16_t m_unit_index;           // From which method was this MIR included
@@ -346,6 +353,9 @@ class MIR : public ArenaObject<kArenaAllocMIR> {
   explicit MIR() : offset(0), optimization_flags(0), m_unit_index(0), bb(NullBasicBlockId),
                  next(nullptr), ssa_rep(nullptr) {
     memset(&meta, 0, sizeof(meta));
+#if ART_TAINTING
+    code_ptr = nullptr;
+#endif
   }
 
   uint32_t GetStartUseIndex() const {
@@ -524,8 +534,13 @@ struct CallInfo {
 };
 
 
+#if ART_TAINTING
+const RegLocation bad_loc = {kLocDalvikFrame, 0, 0, 0, 0, 0, 0, 0, 0, RegStorage(), INVALID_SREG,
+                             INVALID_SREG, 0};
+#else
 const RegLocation bad_loc = {kLocDalvikFrame, 0, 0, 0, 0, 0, 0, 0, 0, RegStorage(), INVALID_SREG,
                              INVALID_SREG};
+#endif
 
 class MIRGraph {
  public:
@@ -560,6 +575,12 @@ class MIRGraph {
   const uint16_t* GetCurrentInsns() const {
     return current_code_item_->insns_;
   }
+
+#if ART_TAINTING
+  std::map<uint32_t, uint32_t>* GetArtTaintings() {
+    return art_taintings_;
+  }
+#endif
 
   /**
    * @brief Used to obtain the raw dex bytecode instruction pointer.
@@ -788,8 +809,10 @@ class MIRGraph {
 
   int64_t ConstantValueWide(RegLocation loc) const {
     DCHECK(IsConst(loc));
+#if !ART_TAINTING
     DCHECK(!loc.high_word);  // Do not allow asking for the high partner.
     DCHECK_LT(loc.orig_sreg + 1, GetNumSSARegs());
+#endif
     return (static_cast<int64_t>(constant_values_[loc.orig_sreg + 1]) << 32) |
         Low32Bits(static_cast<int64_t>(constant_values_[loc.orig_sreg]));
   }
@@ -1444,6 +1467,11 @@ class MIRGraph {
   uint32_t* suspend_checks_in_loops_;
 
   static const uint64_t oat_data_flow_attributes_[kMirOpLast];
+
+#if ART_TAINTING
+  std::map<uint32_t, uint32_t>* art_taintings_ = nullptr;
+  friend class Mir2Lir;
+#endif
 
   friend class MirOptimizationTest;
   friend class ClassInitCheckEliminationTest;

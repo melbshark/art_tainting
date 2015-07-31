@@ -483,6 +483,14 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
   DCHECK(CheckCorePoolSanity()) << PrettyMethod(cu_->method_idx, *cu_->dex_file) << " @ 0x:"
                                 << std::hex << current_dalvik_offset_;
 
+#if ART_TAINTING
+  std::map<uint32_t, uint32_t>* art_taintings = mir_graph_->GetArtTaintings();
+  std::map<uint32_t, uint32_t>::iterator it;
+  CallInfo* call_info = nullptr;
+  int sfields_value = 0;
+  std::map<uint16_t, int>::iterator sfields_it;
+#endif
+
   // Prep Src and Dest locations.
   int next_sreg = 0;
   int next_loc = 0;
@@ -621,6 +629,51 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
 
     case Instruction::NEW_INSTANCE:
       GenNewInstance(vB, rl_dest);
+#if ART_TAINTING
+      // VLOG(compiler) << "ART_TAINTING - cu_->class_def_idx: " << cu_->class_def_idx << "\tcu_->method_idx: " << cu_->method_idx;
+      // VLOG(compiler) << "ART_TAINTING - mir->offset: " << mir->offset;
+      if (art_taintings != nullptr && mir->code_ptr != nullptr) {
+        VLOG(compiler) << "ART_TAINTING - mir->code_ptr: " << std::hex << mir->code_ptr;
+        it = art_taintings->find(*mir->code_ptr);
+        if (it == art_taintings->end()) {
+          VLOG(compiler) << "ART_TAINTING - could not find tainting at address: " << std::hex << mir->code_ptr;
+        } else {
+          // taint the virtual dalvik registers
+          rl_result.taint = it->second;
+          rl_dest.taint = it->second;
+          rl_src[0].taint = it->second;
+          rl_src[1].taint = it->second;
+          rl_src[2].taint = it->second;
+
+          // manage the dedicated map for static fields, indexed by class index
+          sfields_value |= it->second;
+          sfields_it = art_taintings_sfields_.find(cu_->class_def_idx);
+          if (sfields_it != art_taintings_sfields_.end()) {
+            sfields_value |= sfields_it->second;
+          }
+          art_taintings_sfields_.insert(std::pair<uint16_t, int>(cu_->class_def_idx, sfields_value));
+
+          if (mir->next != nullptr) {
+            if (mir->next->dalvikInsn.opcode == Instruction::INVOKE_DIRECT) {
+              art_taintings->insert(std::pair<uint32_t, uint32_t>(*mir->next->code_ptr, it->second));
+              VLOG(compiler) << "ART_TAINTING - adding taint for object at address: " << std::hex << mir->next->code_ptr;
+            }
+          }
+
+          // for (int i = 0; i < mir->ssa_rep->num_defs; ++i) {
+          //   VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->defs[" << i << "]: " << mir->ssa_rep->defs[i];
+          // }
+          // for (int i = 0; i < mir->ssa_rep->num_uses; ++i) {
+          //   VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->uses[" << i << "]: " << mir->ssa_rep->uses[i];
+          // }
+          // VLOG(compiler) << "ART_TAINTING - rl_dest.s_reg_low: " << rl_dest.s_reg_low;
+          // VLOG(compiler) << "ART_TAINTING - rl_dest.orig_sreg: " << rl_dest.orig_sreg;
+          // VLOG(compiler) << "ART_TAINTING - rl_dest.location: " << rl_dest.location;
+        }
+      } else {
+        VLOG(compiler) << "ART_TAINTING - mir->code_ptr not set!";
+      }
+#endif
       break;
 
     case Instruction::THROW:
@@ -821,16 +874,28 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
     case Instruction::IPUT_WIDE_QUICK:
     case Instruction::IPUT_WIDE:
       GenIPut(mir, opt_flags, rl_src[0].fp ? kDouble : k64, rl_src[0], rl_src[1]);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (IPUT_WIDE): " << rl_src[0].taint;
+      VLOG(compiler) << "ART_TAINTING - rl_src[1].taint (IPUT_WIDE): " << rl_src[1].taint;
+#endif
       break;
 
     case Instruction::IPUT_OBJECT_QUICK:
     case Instruction::IPUT_OBJECT:
       GenIPut(mir, opt_flags, kReference, rl_src[0], rl_src[1]);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (IPUT_OBJECT): " << rl_src[0].taint;
+      VLOG(compiler) << "ART_TAINTING - rl_src[1].taint (IPUT_OBJECT): " << rl_src[1].taint;
+#endif
       break;
 
     case Instruction::IPUT_QUICK:
     case Instruction::IPUT:
       GenIPut(mir, opt_flags, rl_src[0].fp ? kSingle : k32, rl_src[0], rl_src[1]);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (IPUT): " << rl_src[0].taint;
+      VLOG(compiler) << "ART_TAINTING - rl_src[1].taint (IPUT): " << rl_src[1].taint;
+#endif
       break;
 
     case Instruction::IPUT_BYTE_QUICK:
@@ -838,16 +903,28 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
     case Instruction::IPUT_BYTE:
     case Instruction::IPUT_BOOLEAN:
       GenIPut(mir, opt_flags, kUnsignedByte, rl_src[0], rl_src[1]);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (IPUT_BOOLEAN): " << rl_src[0].taint;
+      VLOG(compiler) << "ART_TAINTING - rl_src[1].taint (IPUT_BOOLEAN): " << rl_src[1].taint;
+#endif
       break;
 
     case Instruction::IPUT_CHAR_QUICK:
     case Instruction::IPUT_CHAR:
       GenIPut(mir, opt_flags, kUnsignedHalf, rl_src[0], rl_src[1]);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (IPUT_CHAR): " << rl_src[0].taint;
+      VLOG(compiler) << "ART_TAINTING - rl_src[1].taint (IPUT_CHAR): " << rl_src[1].taint;
+#endif
       break;
 
     case Instruction::IPUT_SHORT_QUICK:
     case Instruction::IPUT_SHORT:
       GenIPut(mir, opt_flags, kSignedHalf, rl_src[0], rl_src[1]);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (IPUT_SHORT): " << rl_src[0].taint;
+      VLOG(compiler) << "ART_TAINTING - rl_src[1].taint (IPUT_SHORT): " << rl_src[1].taint;
+#endif
       break;
 
     case Instruction::SGET_OBJECT:
@@ -881,28 +958,46 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
 
     case Instruction::SPUT_OBJECT:
       GenSput(mir, rl_src[0], kReference);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (SPUT_OBJECT): " << rl_src[0].taint;
+#endif
       break;
 
     case Instruction::SPUT:
       GenSput(mir, rl_src[0], rl_src[0].fp ? kSingle : k32);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (SPUT): " << rl_src[0].taint;
+#endif
       break;
 
     case Instruction::SPUT_BYTE:
     case Instruction::SPUT_BOOLEAN:
       GenSput(mir, rl_src[0], kUnsignedByte);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (SPUT_BOOLEAN): " << rl_src[0].taint;
+#endif
       break;
 
     case Instruction::SPUT_CHAR:
       GenSput(mir, rl_src[0], kUnsignedHalf);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (SPUT_CHAR): " << rl_src[0].taint;
+#endif
       break;
 
     case Instruction::SPUT_SHORT:
       GenSput(mir, rl_src[0], kSignedHalf);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (SPUT_SHORT): " << rl_src[0].taint;
+#endif
       break;
 
 
     case Instruction::SPUT_WIDE:
       GenSput(mir, rl_src[0], rl_src[0].fp ? kDouble : k64);
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - rl_src[0].taint (SPUT_WIDE): " << rl_src[0].taint;
+#endif
       break;
 
     case Instruction::INVOKE_STATIC_RANGE:
@@ -913,7 +1008,33 @@ void Mir2Lir::CompileDalvikInstruction(MIR* mir, BasicBlock* bb, LIR* label_list
       break;
 
     case Instruction::INVOKE_DIRECT:
+#if ART_TAINTING
+      VLOG(compiler) << "ART_TAINTING - INVOKE_DIRECT address: " << std::hex << mir->code_ptr;
+      call_info = mir_graph_->NewMemCallInfo(bb, mir, kDirect, false);
+      if (art_taintings != nullptr && mir->code_ptr != nullptr) {
+        VLOG(compiler) << "ART_TAINTING - mir->code_ptr: " << std::hex << mir->code_ptr;
+        it = art_taintings->find(*mir->code_ptr);
+        if (it == art_taintings->end()) {
+          VLOG(compiler) << "ART_TAINTING - could not find tainting at address: " << std::hex << mir->code_ptr;
+        } else {
+          call_info->result.taint = it->second;
+          VLOG(compiler) << "ART_TAINTING - &call_info->result.taint: " << std::hex << &call_info->result.taint;
+          for (int i = 0; i < mir->ssa_rep->num_defs; i++) {
+            VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->defs[" << i << "]: " << mir->ssa_rep->defs[i];
+            mir_graph_->reg_location_[mir->ssa_rep->defs[i]].taint = it->second;
+          }
+          for (int i = 0; i < mir->ssa_rep->num_uses; i++) {
+            VLOG(compiler) << "ART_TAINTING - mir->ssa_rep->uses[" << i << "]: " << mir->ssa_rep->uses[i];
+            mir_graph_->reg_location_[mir->ssa_rep->uses[i]].taint = it->second;
+          }
+        }
+      } else {
+        VLOG(compiler) << "ART_TAINTING - mir->code_ptr not set!";
+      }
+      GenInvoke(call_info);
+#else
       GenInvoke(mir_graph_->NewMemCallInfo(bb, mir, kDirect, false));
+#endif
       break;
     case Instruction::INVOKE_DIRECT_RANGE:
       GenInvoke(mir_graph_->NewMemCallInfo(bb, mir, kDirect, true));

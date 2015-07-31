@@ -270,9 +270,15 @@ size_t MIRGraph::GetNumAvailableVRTemps() {
 }
 
 // FIXME - will probably need to revisit all uses of this, as type not defined.
+#if ART_TAINTING
+static const RegLocation temp_loc = {kLocCompilerTemp,
+                                     0, 1 /*defined*/, 0, 0, 0, 0, 0, 1 /*home*/,
+                                     RegStorage(), INVALID_SREG, INVALID_SREG, 0};
+#else
 static const RegLocation temp_loc = {kLocCompilerTemp,
                                      0, 1 /*defined*/, 0, 0, 0, 0, 0, 1 /*home*/,
                                      RegStorage(), INVALID_SREG, INVALID_SREG};
+#endif
 
 CompilerTemp* MIRGraph::GetNewCompilerTemp(CompilerTempType ct_type, bool wide) {
   // Once the compiler temps have been committed, new ones cannot be requested anymore.

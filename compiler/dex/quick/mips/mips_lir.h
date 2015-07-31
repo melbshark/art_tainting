@@ -503,6 +503,33 @@ constexpr RegStorage rs_rD30(RegStorage::kValid | rD30);
 constexpr RegStorage rs_rD31(RegStorage::kValid | rD31);
 
 // RegisterLocation templates return values (r_V0, or r_V0/r_V1).
+#if ART_TAINTING
+const RegLocation mips_loc_c_return
+    {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k32BitSolo, rV0), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips64_loc_c_return_ref
+    {kLocPhysReg, 0, 0, 0, 0, 0, 1, 0, 1,
+     RegStorage(RegStorage::k64BitSolo, rV0d), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips_loc_c_return_wide
+    {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitPair, rV0, rV1), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips64_loc_c_return_wide
+    {kLocPhysReg, 1, 0, 0, 0, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitSolo, rV0d), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips_loc_c_return_float
+    {kLocPhysReg, 0, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k32BitSolo, rF0), INVALID_SREG, INVALID_SREG, 0};
+// FIXME: move MIPS to k64Bitsolo for doubles
+const RegLocation mips_loc_c_return_double_fr0
+    {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitPair, rF0, rF1), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips_loc_c_return_double_fr1
+    {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitSolo, rF0), INVALID_SREG, INVALID_SREG, 0};
+const RegLocation mips64_loc_c_return_double
+    {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
+     RegStorage(RegStorage::k64BitSolo, rD0), INVALID_SREG, INVALID_SREG, 0};
+#else
 const RegLocation mips_loc_c_return
     {kLocPhysReg, 0, 0, 0, 0, 0, 0, 0, 1,
      RegStorage(RegStorage::k32BitSolo, rV0), INVALID_SREG, INVALID_SREG};
@@ -528,6 +555,7 @@ const RegLocation mips_loc_c_return_double_fr1
 const RegLocation mips64_loc_c_return_double
     {kLocPhysReg, 1, 0, 0, 1, 0, 0, 0, 1,
      RegStorage(RegStorage::k64BitSolo, rD0), INVALID_SREG, INVALID_SREG};
+#endif
 
 enum MipsShiftEncodings {
   kMipsLsl = 0x0,
