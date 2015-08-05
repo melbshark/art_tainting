@@ -427,7 +427,11 @@ static bool UseSwap(bool is_image, std::vector<const DexFile*>& dex_files) {
 class Dex2Oat FINAL {
  public:
   explicit Dex2Oat(TimingLogger* timings) :
+#if ART_TAINTING
+      compiler_kind_(Compiler::kQuick),
+#else
       compiler_kind_(kUseOptimizingCompiler ? Compiler::kOptimizing : Compiler::kQuick),
+#endif
       instruction_set_(kRuntimeISA),
       // Take the default set of instruction features from the build.
       method_inliner_map_(),
@@ -759,7 +763,11 @@ class Dex2Oat FINAL {
     if (!requested_specific_compiler && !kUseOptimizingCompiler) {
       // If no specific compiler is requested, the current behavior is
       // to compile the boot image with Quick, and the rest with Optimizing.
+#if ART_TAINTING
+      compiler_kind_ = Compiler::kQuick;
+#else
       compiler_kind_ = image_ ? Compiler::kQuick : Compiler::kOptimizing;
+#endif
     }
 
     if (compiler_kind_ == Compiler::kOptimizing) {

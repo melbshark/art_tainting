@@ -1085,8 +1085,9 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
 
     // load the already stored value into a register
     RegStorage reg_taint_value = AllocTemp();
+    // TODO: remove this debug if-statement below
     // if (cu_->taint_field_idx == 6409) {
-    //   cu_->taint_field_offset = 8;
+    //   cu_->taint_field_offset = 12;
     // }
     LoadBaseDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_value, OpSize::kWord, kNotVolatile);
 
@@ -1094,7 +1095,7 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
     OpRegRegReg(kOpOr, reg_taint_new_value, reg_taint_new_value, reg_taint_value);
 
     // store the combined taint value into the object's taint field
-    if (is_object) {
+    if (IsRef(size)) {
       VLOG(compiler) << "ART_TAINTING: Tainting with StoreRefDisp for field with index: " << cu_->taint_field_idx;
       StoreRefDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_new_value, kNotVolatile);
     } else {

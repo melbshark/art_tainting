@@ -95,6 +95,9 @@ static void EnableDebugFeatures(uint32_t debug_flags) {
 
   const bool safe_mode = (debug_flags & DEBUG_ENABLE_SAFEMODE) != 0;
   if (safe_mode) {
+#if ART_TAINTING
+    LOG(INFO) << "Enabling --compiler-filter=interpret-only";
+#endif
     // Ensure that any (secondary) oat files will be interpreted.
     runtime->AddCompilerOption("--compiler-filter=interpret-only");
     debug_flags &= ~DEBUG_ENABLE_SAFEMODE;
@@ -105,8 +108,10 @@ static void EnableDebugFeatures(uint32_t debug_flags) {
     if (safe_mode) {
       LOG(INFO) << "Not enabling JIT due to safe mode";
     } else {
+#if !ART_TAINTING
       use_jit = true;
       LOG(INFO) << "Late-enabling JIT";
+#endif
     }
     debug_flags &= ~DEBUG_ENABLE_JIT;
   }
