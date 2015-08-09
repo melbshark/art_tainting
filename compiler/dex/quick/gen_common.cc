@@ -613,32 +613,8 @@ void Mir2Lir::GenSput(MIR* mir, RegLocation rl_src, bool is_long_or_double,
       MarkGCCard(rl_src.reg, r_base);
     }
 
-#if ART_TAINTING && 0
+#if ART_TAINTING
     std::map<uint16_t, int>::iterator sfields_it = art_taintings_sfields_.find(cu_->class_def_idx);
-    // if (sfields_it != art_taintings_sfields_.end()
-    //     && rl_src.s_reg_low != INVALID_SREG) {
-    //   VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
-    //   StoreRefDisp(r_base, cu_->taint_field_offset, rl_src.reg, kNotVolatile);
-
-    //   // load the new taint value into a register
-    //   RegStorage reg_taint_new_value = AllocTemp();
-    //   LoadConstant(reg_taint_new_value, sfields_it->second);
-
-    //   // load the already stored value into a register
-    //   RegStorage reg_taint_value = AllocTemp();
-    //   LoadBaseDisp(r_base, cu_->taint_field_offset, reg_taint_value, OpSize::kWord, kNotVolatile);
-    //   VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
-
-    //   // logical OR both values
-    //   NewLIR4(kThumb2OrrRRR, reg_taint_new_value.GetReg(), reg_taint_new_value.GetReg(), reg_taint_value.GetReg(), 0);
-
-    //   // store the combined taint value into the object's taint field
-    //   VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
-    //   StoreBaseDisp(r_base, cu_->taint_field_offset, reg_taint_new_value, OpSize::kWord, kNotVolatile);
-    //   VLOG(compiler) << "ART_TAINTING: Tainting static field for class (index): " << cu_->class_def_idx;
-    //   FreeTemp(reg_taint_value);
-    //   FreeTemp(reg_taint_new_value);
-    // }
     if (sfields_it != art_taintings_sfields_.end() && rl_src.s_reg_low != INVALID_SREG) {
       // load the new taint value into a register
       RegStorage reg_taint_new_value = AllocTemp();
@@ -858,28 +834,15 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
   }
 
 #if ART_TAINTING
-  // uint32_t old_field_idx = mir->dalvikInsn.vC;
-  // mir->dalvikInsn.vC = cu_->taint_field_idx;
-  // const MirIFieldLoweringInfo& field_info_taint = mir_graph_->GetIFieldLoweringInfo(mir);
-  // int field_offset_taint = field_info_taint.FieldOffset().Int32Value();
-  // VLOG(compiler) << "ART_TAINTING: Taint field offset (temp.): " << field_offset_taint;
-  // mir->dalvikInsn.vC = old_field_idx;
-
-  // Runtime* runtime = Runtime::Current();
-  // instrumentation::Instrumentation* instrumentation = runtime->GetInstrumentation();
-  // LOG(INFO) << "ART_TAINTING: instrumentation->InterpretOnly(): " << instrumentation->InterpretOnly();
-
-  if (cu_->taint_field_idx >= 0) {
+  if (cu_->taint_field_idx >= 0 &&
+      rl_obj.s_reg_low != INVALID_SREG && rl_obj.taint != 0) {
+    // compute the field's offset relative to the object in memory
     MemberOffset field_offset(0u);
     bool is_volatile;
     DexCompilationUnit* dex_cu = mir_graph_->GetCurrentDexCompilationUnit();
     cu_->compiler_driver->ComputeInstanceFieldInfo(cu_->taint_field_idx, dex_cu, true, &field_offset, &is_volatile);
     cu_->taint_field_offset = field_offset.Int32Value();
-    VLOG(compiler) << "ART_TAINTING: ComputeInstanceFieldInfo: " << cu_->taint_field_offset;
-  }
 
-  if (cu_->taint_field_idx >= 0 &&
-      rl_obj.s_reg_low != INVALID_SREG && rl_obj.taint != 0) {
     // load the new taint value into a register
     RegStorage reg_taint_new_value = AllocTemp();
     LoadConstant(reg_taint_new_value, rl_obj.taint);
@@ -887,7 +850,7 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
     // load the already stored value into a register
     RegStorage reg_taint_value = AllocTemp();
     // if (cu_->taint_field_idx == 6409) {
-    //   cu_->taint_field_offset = 8;
+    //   cu_->taint_field_offset = 12;
     // }
     LoadBaseDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_value, OpSize::kWord, kNotVolatile);
 
