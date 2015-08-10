@@ -729,7 +729,6 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
     art_taintings_ = new std::map<uint32_t, uint32_t>();
   }
   const DexFile::ClassDef& class_def = dex_file.GetClassDef(class_def_idx);
-  VLOG(compiler) << "ART_TAINTING - looking for taint field number of field: " << ART_TAINTING_FIELD_NAME;
   for (size_t i = 0; i < dex_file.NumFieldIds(); i++) {
     const DexFile::FieldId& field_id = dex_file.GetFieldId(i);
     std::string field_name(dex_file.GetFieldName(field_id));
@@ -738,6 +737,9 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
       cu_->taint_field_idx = i;
       VLOG(compiler) << "ART_TAINTING - found taint field number (cu_->taint_field_idx): " << cu_->taint_field_idx;
     }
+  }
+  if (cu_->taint_field_idx < 0) {
+    VLOG(compiler) << "ART_TAINTING - could not find taint field: " << ART_TAINTING_FIELD_NAME;
   }
 #endif
 
@@ -754,7 +756,7 @@ void MIRGraph::InlineMethod(const DexFile::CodeItem* code_item, uint32_t access_
 
 #if ART_TAINTING
     insn->code_ptr = code_ptr;
-    if (opcode == Instruction::NEW_INSTANCE) {
+    if (cu_->taint_field_idx > 0 && opcode == Instruction::NEW_INSTANCE) {
       art_taintings_->insert(std::pair<uint32_t, uint32_t>(*code_ptr, 1));
       VLOG(compiler) << "ART_TAINTING - adding taint for object at address: " << std::hex << code_ptr;
     }

@@ -791,6 +791,14 @@ void Mir2Lir::GenIGet(MIR* mir, int opt_flags, OpSize size,
       StoreValue(rl_dest, rl_result);
     }
   }
+
+#if ART_TAINTING
+  if (cu_->taint_field_idx > 0 &&
+      rl_obj.s_reg_low != INVALID_SREG && rl_obj.taint != 0) {
+    rl_dest.taint = rl_obj.taint;
+    VLOG(compiler) << "ART_TAINTING: Copying taint label to rl_dest in GenIGet()";
+  }
+#endif
 }
 
 void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
@@ -834,7 +842,7 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
   }
 
 #if ART_TAINTING
-  if (cu_->taint_field_idx >= 0 &&
+  if (cu_->taint_field_idx > 0 &&
       rl_obj.s_reg_low != INVALID_SREG && rl_obj.taint != 0) {
     // compute the field's offset relative to the object in memory
     MemberOffset field_offset(0u);
@@ -849,9 +857,6 @@ void Mir2Lir::GenIPut(MIR* mir, int opt_flags, OpSize size,
 
     // load the already stored value into a register
     RegStorage reg_taint_value = AllocTemp();
-    // if (cu_->taint_field_idx == 6409) {
-    //   cu_->taint_field_offset = 12;
-    // }
     LoadBaseDisp(rl_obj.reg, cu_->taint_field_offset, reg_taint_value, OpSize::kWord, kNotVolatile);
 
     // non-exclusive logical OR both values
@@ -1621,6 +1626,16 @@ void Mir2Lir::GenArithOpInt(Instruction::Code opcode, RegLocation rl_dest,
     }
     StoreValue(rl_dest, rl_result);
   }
+
+#if ART_TAINTING
+  if (cu_->taint_field_idx > 0 &&
+      rl_src1.s_reg_low != INVALID_SREG && rl_src2.s_reg_low != INVALID_SREG
+      && (rl_src1.taint != 0 || rl_src2.taint != 0)) {
+    rl_dest.taint |= rl_src1.taint;
+    rl_dest.taint |= rl_src2.taint;
+    VLOG(compiler) << "ART_TAINTING: Copying taint label to rl_dest in GenArithOpInt()";
+  }
+#endif
 }
 
 /*
